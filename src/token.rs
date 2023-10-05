@@ -3,8 +3,8 @@ use thiserror::Error;
 
 #[derive(Debug)]
 pub enum Token {
+    Exit,
     Semi,
-    Return,
     I64Literal(i64),
 }
 
@@ -25,7 +25,7 @@ impl FromStr for Token {
 
     fn from_str(word: &str) -> Result<Self, Self::Err> {
         let token = match word {
-            "return" => Token::Return,
+            "exit" => Token::Exit,
             i64_literal if i64_literal.parse::<i64>().is_ok() => {
                 Token::I64Literal(i64_literal.parse().unwrap())
             }

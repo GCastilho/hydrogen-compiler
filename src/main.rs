@@ -1,7 +1,7 @@
 mod parser;
 mod token;
 
-use parser::ParseTokenStream;
+use parser::Tokenizer;
 use std::fs;
 use std::io::BufReader;
 use utf8_chars::BufReadCharsExt;

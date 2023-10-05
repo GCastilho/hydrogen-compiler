@@ -17,7 +17,7 @@ impl<I: Iterator<Item = io::Result<char>>> TokenParser<I> {
 }
 
 impl<I: Iterator<Item = io::Result<char>>> Iterator for TokenParser<I> {
-    type Item = Result<Token, TokenStreamParserError>;
+    type Item = Result<Token, TokenizerError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next()? {
@@ -45,14 +45,14 @@ impl<I: Iterator<Item = io::Result<char>>> Iterator for TokenParser<I> {
     }
 }
 
-pub trait ParseTokenStream {
+pub trait Tokenizer {
     fn tokens(self) -> TokenParser<Self>
     where
         Self: Sized,
         Self: Iterator<Item = io::Result<char>>;
 }
 
-impl<I: Iterator<Item = io::Result<char>>> ParseTokenStream for I {
+impl<I: Iterator<Item = io::Result<char>>> Tokenizer for I {
     fn tokens(self) -> TokenParser<Self>
     where
         Self: Sized,
@@ -63,7 +63,7 @@ impl<I: Iterator<Item = io::Result<char>>> ParseTokenStream for I {
 }
 
 #[derive(Debug, Error)]
-pub enum TokenStreamParserError {
+pub enum TokenizerError {
     #[error("I/O error: {0}")]
     Io(#[from] io::Error),
 
