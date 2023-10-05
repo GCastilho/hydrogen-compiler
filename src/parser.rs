@@ -1,5 +1,6 @@
-use super::token::Token;
+use super::token::{Token, TokenParseError};
 use std::{io, iter::Peekable, mem};
+use thiserror::Error;
 
 pub struct TokenParser<I: Iterator<Item = io::Result<char>>> {
     iter: Peekable<I>,
@@ -15,9 +16,8 @@ impl<I: Iterator<Item = io::Result<char>>> TokenParser<I> {
     }
 }
 
-// TODO: Error deve ser um enum com io error ou TokenParseError
 impl<I: Iterator<Item = io::Result<char>>> Iterator for TokenParser<I> {
-    type Item = io::Result<Token>;
+    type Item = Result<Token, TokenStreamParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next()? {
@@ -34,13 +34,13 @@ impl<I: Iterator<Item = io::Result<char>>> Iterator for TokenParser<I> {
                         }
                     }
                     let word = mem::take(&mut self.buf).into_iter().collect::<String>();
-                    match word.parse::<Token>() {
+                    match word.parse() {
                         Ok(token) => Some(Ok(token)),
-                        Err(_) => todo!(),
+                        Err(err) => Some(Err(err.into())),
                     }
                 }
             },
-            Err(err) => Some(Err(err)),
+            Err(err) => Some(Err(err.into())),
         }
     }
 }
@@ -60,4 +60,13 @@ impl<I: Iterator<Item = io::Result<char>>> ParseTokenStream for I {
     {
         TokenParser::new(self)
     }
+}
+
+#[derive(Debug, Error)]
+pub enum TokenStreamParserError {
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
+
+    #[error("Error parsing token: {0}")]
+    Parse(#[from] TokenParseError),
 }

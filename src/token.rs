@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub enum Token {
@@ -34,8 +35,11 @@ impl FromStr for Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum TokenParseError {
+    #[error("Invalid control character: {0}")]
     InvalidControlChar(char),
+
+    #[error("Invalid token string: {0}")]
     InvalidToken(String),
 }
