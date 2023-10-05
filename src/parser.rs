@@ -15,28 +15,28 @@ impl<I: Iterator<Item = io::Result<char>>> TokenParser<I> {
     }
 }
 
+// TODO: Error deve ser um enum com io error ou TokenParseError
 impl<I: Iterator<Item = io::Result<char>>> Iterator for TokenParser<I> {
     type Item = io::Result<Token>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next()? {
-            Ok(char) => match char {
-                ';' => Some(Ok(Token::Semi)),
-                ' ' => self.next(),
-                char => {
+            Ok(char) => match Token::try_from(char) {
+                Ok(token) => Some(Ok(token)),
+                Err(_) => {
+                    if matches!(char, ' ') {
+                        return self.next();
+                    }
                     self.buf.push(char);
                     if let Ok(next) = self.iter.peek()? {
-                        if !matches!(next, ';' | ' ') {
+                        if Token::try_from(*next).is_err() && !matches!(next, ' ') {
                             return self.next();
                         }
                     }
                     let word = mem::take(&mut self.buf).into_iter().collect::<String>();
-                    match word.as_str() {
-                        "return" => Some(Ok(Token::Return)),
-                        i64_literal if i64_literal.parse::<i64>().is_ok() => {
-                            Some(Ok(Token::I64Literal(i64_literal.parse().unwrap())))
-                        }
-                        invalid_token => todo!(),
+                    match word.parse::<Token>() {
+                        Ok(token) => Some(Ok(token)),
+                        Err(_) => todo!(),
                     }
                 }
             },
