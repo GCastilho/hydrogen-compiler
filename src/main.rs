@@ -17,5 +17,5 @@ fn main() {
         .tokens()
         .map(|c| c.expect("tokens failed"))
         .collect::<Vec<_>>();
-    println!("chars: {:?}", tokens);
+    println!("tokens: {:?}", tokens);
 }
