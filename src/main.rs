@@ -1,9 +1,9 @@
-mod parser;
 mod token;
+mod tokenization;
 
-use parser::Tokenizer;
 use std::fs;
 use std::io::BufReader;
+use tokenization::Tokenizer;
 use utf8_chars::BufReadCharsExt;
 
 const INPUT_FILE_PATH: &str = "./main.hy";
