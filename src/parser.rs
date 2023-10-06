@@ -1,17 +1,15 @@
 use super::token::{Token, TokenParseError};
-use std::{io, iter::Peekable, mem};
+use std::{char, io, iter::Peekable};
 use thiserror::Error;
 
 pub struct TokenParser<I: Iterator<Item = io::Result<char>>> {
     iter: Peekable<I>,
-    buf: Vec<char>,
 }
 
 impl<I: Iterator<Item = io::Result<char>>> TokenParser<I> {
     fn new(iter: I) -> Self {
         Self {
             iter: iter.peekable(),
-            buf: Vec::new(),
         }
     }
 }
@@ -24,16 +22,18 @@ impl<I: Iterator<Item = io::Result<char>>> Iterator for TokenParser<I> {
             Ok(char) => match Token::try_from(char) {
                 Ok(token) => Some(Ok(token)),
                 Err(_) => {
-                    if matches!(char, ' ') {
+                    if char.is_whitespace() {
                         return self.next();
                     }
-                    self.buf.push(char);
-                    if let Ok(next) = self.iter.peek()? {
-                        if Token::try_from(*next).is_err() && !matches!(next, ' ') {
-                            return self.next();
-                        }
+                    let mut buf = vec![char];
+                    while self
+                        .iter
+                        .peek()
+                        .is_some_and(|v| v.as_ref().is_ok_and(|c| c.is_alphanumeric()))
+                    {
+                        buf.push(self.iter.next()?.unwrap());
                     }
-                    let word = mem::take(&mut self.buf).into_iter().collect::<String>();
+                    let word = buf.into_iter().collect::<String>();
                     match word.parse() {
                         Ok(token) => Some(Ok(token)),
                         Err(err) => Some(Err(err.into())),
