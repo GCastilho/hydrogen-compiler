@@ -18,13 +18,9 @@ fn main() {
         .chars()
         .tokens()
         .map(|c| c.expect("tokens failed"))
-        .parse();
+        .parse()
+        .unwrap();
     println!("root: {:?}", root);
-
-    let int = Node::I64(69);
-    let expr = Expr::new(int);
-    let exit_statement = Statement::Exit(expr);
-    let root = Root::new(exit_statement);
 
     println!("exit_node: {root:?}");
 }

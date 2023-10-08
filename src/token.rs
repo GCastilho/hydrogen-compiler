@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Token {
     Exit,
     Semi,
