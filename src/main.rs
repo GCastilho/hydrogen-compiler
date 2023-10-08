@@ -1,6 +1,8 @@
+mod parser;
 mod token;
 mod tokenization;
 
+use parser::*;
 use std::fs;
 use std::io::BufReader;
 use tokenization::Tokenizer;
@@ -12,10 +14,17 @@ fn main() {
     let file = fs::File::open(INPUT_FILE_PATH).unwrap();
     let mut reader = BufReader::new(file);
 
-    let tokens = reader
+    let root = reader
         .chars()
         .tokens()
         .map(|c| c.expect("tokens failed"))
-        .collect::<Vec<_>>();
-    println!("tokens: {:?}", tokens);
+        .parse();
+    println!("root: {:?}", root);
+
+    let int = Node::I64(69);
+    let expr = Expr::new(int);
+    let exit_statement = Statement::Exit(expr);
+    let root = Root::new(exit_statement);
+
+    println!("exit_node: {root:?}");
 }
