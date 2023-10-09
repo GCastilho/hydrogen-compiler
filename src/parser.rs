@@ -9,12 +9,31 @@ impl Root {
     fn try_from_iter<I: Iterator<Item = Token>>(
         mut iter: Peekable<I>,
     ) -> Result<Self, AstParserError> {
-        let token = iter.peek().ok_or(AstParserError::TokenIsNone)?;
+        let token = iter.peek_token()?;
         let node = match token {
             Token::Exit => Statement::try_from_iter(&mut iter)?,
             _ => return Err(AstParserError::UnexpectedToken(*token)),
         };
         Ok(Self(node))
+    }
+}
+
+trait TokenIterator
+where
+    Self: Sized,
+    Self: Iterator<Item = Token>,
+{
+    fn next_token(&mut self) -> Result<Token, AstParserError>;
+    fn peek_token(&mut self) -> Result<&Token, AstParserError>;
+}
+
+impl<I: Iterator<Item = Token>> TokenIterator for Peekable<I> {
+    fn next_token(&mut self) -> Result<Token, AstParserError> {
+        self.next().ok_or(AstParserError::TokenIsNone)
+    }
+
+    fn peek_token(&mut self) -> Result<&Token, AstParserError> {
+        self.peek().ok_or(AstParserError::TokenIsNone)
     }
 }
 
@@ -27,7 +46,7 @@ impl Statement {
     fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
-        let token = iter.next().ok_or(AstParserError::TokenIsNone)?;
+        let token = iter.next_token()?;
         match token {
             Token::Exit => Ok(Self::Exit(Expr::try_from_iter(iter)?)),
             _ => Err(AstParserError::UnexpectedToken(token)),
@@ -43,7 +62,7 @@ impl Expr {
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
         let node = Node::try_from_iter(iter)?;
-        let token = iter.next().ok_or(AstParserError::TokenIsNone)?;
+        let token = iter.next_token()?;
         if matches!(token, Token::Semi) {
             Ok(Self(node))
         } else {
@@ -61,7 +80,7 @@ impl Node {
     fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
-        let token = iter.next().ok_or(AstParserError::TokenIsNone)?;
+        let token = iter.next_token()?;
         match token {
             Token::I64Literal(i_64) => Ok(Self::I64(i_64)),
             _ => Err(AstParserError::UnexpectedToken(token)),

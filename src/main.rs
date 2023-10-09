@@ -21,6 +21,4 @@ fn main() {
         .parse()
         .unwrap();
     println!("root: {:?}", root);
-
-    println!("exit_node: {root:?}");
 }
