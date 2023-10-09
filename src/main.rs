@@ -1,3 +1,4 @@
+mod grammar;
 mod parser;
 mod token;
 mod tokenization;
