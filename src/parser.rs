@@ -27,6 +27,12 @@ impl Root {
     }
 }
 
+pub trait TreeParser: Sized {
+    fn try_from_iter<I: Iterator<Item = Token>>(
+        iter: &mut Peekable<I>,
+    ) -> Result<Self, AstParserError>;
+}
+
 pub trait TokenIterator
 where
     Self: Sized,

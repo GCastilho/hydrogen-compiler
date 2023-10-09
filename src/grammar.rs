@@ -1,5 +1,5 @@
 use crate::{
-    parser::{AstParserError, TokenIterator},
+    parser::{AstParserError, TokenIterator, TreeParser},
     token::Token,
 };
 use std::iter::Peekable;
@@ -9,8 +9,8 @@ pub enum Statement {
     Exit(Expr),
 }
 
-impl Statement {
-    pub fn try_from_iter<I: Iterator<Item = Token>>(
+impl TreeParser for Statement {
+    fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
         let token = iter.next_token()?;
@@ -24,7 +24,7 @@ impl Statement {
 #[derive(Debug)]
 pub struct Expr(Node);
 
-impl Expr {
+impl TreeParser for Expr {
     fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
@@ -43,7 +43,7 @@ pub enum Node {
     I64(i64),
 }
 
-impl Node {
+impl TreeParser for Node {
     fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
