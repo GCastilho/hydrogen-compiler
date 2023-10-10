@@ -15,23 +15,27 @@ pub enum AstParserError {
 }
 
 #[derive(Debug)]
-pub struct Root(Statement);
+pub struct Program(Vec<Statement>);
 
-impl Root {
+impl Program {
     fn try_from_iter<I: Iterator<Item = Token>>(
         mut iter: Peekable<I>,
     ) -> Result<Self, AstParserError> {
-        let token = iter.peek_token()?;
-        let node = match token {
-            Token::Exit => Statement::try_from_iter(&mut iter)?,
-            _ => return Err(AstParserError::UnexpectedToken(*token)),
-        };
-        Ok(Self(node))
+        let mut statements = vec![];
+        while iter.peek().is_some() {
+            let token = iter.peek_token()?;
+            let statement = match token {
+                Token::Exit => Statement::try_from_iter(&mut iter)?,
+                _ => return Err(AstParserError::UnexpectedToken(*token)),
+            };
+            statements.push(statement);
+        }
+        Ok(Self(statements))
     }
 
     pub fn to_asm(&self) -> String {
-        let statement = self.0.to_asm();
-        format!("global _start\n\n_start:\n{statement}")
+        let statements = self.0.iter().map(|s| s.to_asm()).collect::<String>();
+        format!("global _start\n\n_start:\n{statements}")
     }
 }
 
@@ -77,15 +81,15 @@ where
     Self: Sized,
     Self: Iterator<Item = Token>,
 {
-    fn parse(self) -> Result<Root, AstParserError>;
+    fn parse(self) -> Result<Program, AstParserError>;
 }
 
 impl<I: Iterator<Item = Token>> Parser for I {
-    fn parse(self) -> Result<Root, AstParserError>
+    fn parse(self) -> Result<Program, AstParserError>
     where
         Self: Sized,
         Self: Iterator<Item = Token>,
     {
-        Root::try_from_iter(self.peekable())
+        Program::try_from_iter(self.peekable())
     }
 }
