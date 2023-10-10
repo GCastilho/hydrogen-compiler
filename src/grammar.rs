@@ -19,6 +19,19 @@ impl TreeParser for Statement {
             _ => Err(AstParserError::UnexpectedToken(token)),
         }
     }
+
+    fn to_asm(&self) -> String {
+        let expr = match self {
+            Statement::Exit(expr) => expr.to_asm(),
+        };
+        format!(
+            "\
+            \x20\x20mov rax, 60\n\
+            \x20\x20mov rdi, {expr}\n\
+            \x20\x20syscall\n\
+            "
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -36,6 +49,10 @@ impl TreeParser for Expr {
             Err(AstParserError::UnexpectedToken(token))
         }
     }
+
+    fn to_asm(&self) -> String {
+        self.0.to_asm()
+    }
 }
 
 #[derive(Debug)]
@@ -51,6 +68,12 @@ impl TreeParser for Node {
         match token {
             Token::I64Literal(i_64) => Ok(Self::I64(i_64)),
             _ => Err(AstParserError::UnexpectedToken(token)),
+        }
+    }
+
+    fn to_asm(&self) -> String {
+        match self {
+            Node::I64(i_64) => i_64.to_string(),
         }
     }
 }

@@ -25,12 +25,19 @@ impl Root {
         };
         Ok(Self(node))
     }
+
+    pub fn to_asm(&self) -> String {
+        let statement = self.0.to_asm();
+        format!("global _start\n\n_start:\n{statement}")
+    }
 }
 
 pub trait TreeParser: Sized {
     fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError>;
+
+    fn to_asm(&self) -> String;
 }
 
 pub trait TokenIterator
