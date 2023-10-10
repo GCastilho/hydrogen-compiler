@@ -1,5 +1,5 @@
 use crate::{grammar::Statement, token::Token};
-use std::iter::Peekable;
+use std::{iter::Peekable, mem};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -9,6 +9,9 @@ pub enum AstParserError {
 
     #[error("Unexpected token {0:?}")]
     UnexpectedToken(Token),
+
+    #[error("Expected token {0:?}")]
+    ExpectedToken(Token),
 }
 
 #[derive(Debug)]
@@ -47,6 +50,7 @@ where
 {
     fn next_token(&mut self) -> Result<Token, AstParserError>;
     fn peek_token(&mut self) -> Result<&Token, AstParserError>;
+    fn expect_token(&mut self, token: Token) -> Result<Token, AstParserError>;
 }
 
 impl<I: Iterator<Item = Token>> TokenIterator for Peekable<I> {
@@ -56,6 +60,15 @@ impl<I: Iterator<Item = Token>> TokenIterator for Peekable<I> {
 
     fn peek_token(&mut self) -> Result<&Token, AstParserError> {
         self.peek().ok_or(AstParserError::TokenIsNone)
+    }
+
+    fn expect_token(&mut self, token: Token) -> Result<Token, AstParserError> {
+        let token_received = self.next_token()?;
+        if mem::discriminant(&token) == mem::discriminant(&token_received) {
+            Ok(token_received)
+        } else {
+            Err(AstParserError::ExpectedToken(token))
+        }
     }
 }
 

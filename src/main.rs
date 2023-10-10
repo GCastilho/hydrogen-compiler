@@ -22,7 +22,7 @@ fn main() {
         .tokens()
         .map(|c| c.expect("tokens failed"))
         .parse()
-        .unwrap();
+        .expect("parse failed");
     println!("root: {:?}", root);
 
     let mut output = fs::File::create(OUTPUT_FILE_PATH).unwrap();

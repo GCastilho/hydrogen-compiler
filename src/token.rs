@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum Token {
     Exit,
     Semi,
+    ParenOpen,
+    ParenClose,
     I64Literal(i64),
 }
 
@@ -14,6 +16,8 @@ impl TryFrom<char> for Token {
     fn try_from(value: char) -> Result<Self, Self::Error> {
         let token = match value {
             ';' => Token::Semi,
+            '(' => Token::ParenOpen,
+            ')' => Token::ParenClose,
             _ => return Err(TokenParseError::InvalidControlChar(value)),
         };
         Ok(token)

@@ -14,9 +14,19 @@ impl TreeParser for Statement {
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
         let token = iter.next_token()?;
-        match token {
-            Token::Exit => Ok(Self::Exit(Expr::try_from_iter(iter)?)),
+        let statement = match token {
+            Token::Exit => {
+                iter.expect_token(Token::ParenOpen)?;
+                let exit = Self::Exit(Expr::try_from_iter(iter)?);
+                iter.expect_token(Token::ParenClose)?;
+                Ok(exit)
+            }
             _ => Err(AstParserError::UnexpectedToken(token)),
+        }?;
+        if iter.expect_token(Token::Semi).is_ok() {
+            Ok(statement)
+        } else {
+            Err(AstParserError::ExpectedToken(Token::Semi))
         }
     }
 
@@ -41,13 +51,7 @@ impl TreeParser for Expr {
     fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
-        let node = Node::try_from_iter(iter)?;
-        let token = iter.next_token()?;
-        if matches!(token, Token::Semi) {
-            Ok(Self(node))
-        } else {
-            Err(AstParserError::UnexpectedToken(token))
-        }
+        Ok(Self(Node::try_from_iter(iter)?))
     }
 
     fn to_asm(&self) -> String {
