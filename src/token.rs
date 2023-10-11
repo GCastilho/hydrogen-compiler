@@ -1,12 +1,13 @@
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Token {
     Exit,
     Semi,
     ParenOpen,
     ParenClose,
+    Ident(String),
     I64Literal(i64),
 }
 
@@ -32,6 +33,14 @@ impl FromStr for Token {
             "exit" => Token::Exit,
             i64_literal if i64_literal.parse::<i64>().is_ok() => {
                 Token::I64Literal(i64_literal.parse().unwrap())
+            }
+            ident
+                if ident
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_alphabetic()) =>
+            {
+                Token::Ident(ident.to_string())
             }
             invalid_token => return Err(TokenParseError::InvalidToken(invalid_token.into())),
         };

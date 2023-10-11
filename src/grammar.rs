@@ -45,39 +45,28 @@ impl TreeParser for Statement {
 }
 
 #[derive(Debug)]
-pub struct Expr(Node);
+pub enum Expr {
+    I64(i64),
+    Ident(String),
+}
 
 impl TreeParser for Expr {
     fn try_from_iter<I: Iterator<Item = Token>>(
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError> {
-        Ok(Self(Node::try_from_iter(iter)?))
-    }
-
-    fn to_asm(&self) -> String {
-        self.0.to_asm()
-    }
-}
-
-#[derive(Debug)]
-pub enum Node {
-    I64(i64),
-}
-
-impl TreeParser for Node {
-    fn try_from_iter<I: Iterator<Item = Token>>(
-        iter: &mut Peekable<I>,
-    ) -> Result<Self, AstParserError> {
         let token = iter.next_token()?;
-        match token {
-            Token::I64Literal(i_64) => Ok(Self::I64(i_64)),
-            _ => Err(AstParserError::UnexpectedToken(token)),
-        }
+        let expr = match token {
+            Token::I64Literal(i64) => Self::I64(i64),
+            Token::Ident(ident) => Self::Ident(ident),
+            _ => return Err(AstParserError::UnexpectedToken(token)),
+        };
+        Ok(expr)
     }
 
     fn to_asm(&self) -> String {
         match self {
-            Node::I64(i_64) => i_64.to_string(),
+            Expr::I64(i64) => i64.to_string(),
+            Expr::Ident(ident) => todo!(),
         }
     }
 }
