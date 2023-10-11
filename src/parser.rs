@@ -23,12 +23,7 @@ impl Program {
     ) -> Result<Self, AstParserError> {
         let mut statements = vec![];
         while iter.peek().is_some() {
-            let token = iter.peek_token()?;
-            let statement = match token {
-                Token::Exit => Statement::try_from_iter(&mut iter)?,
-                _ => return Err(AstParserError::UnexpectedToken(token.clone())),
-            };
-            statements.push(statement);
+            statements.push(Statement::try_from_iter(&mut iter)?);
         }
         Ok(Self(statements))
     }

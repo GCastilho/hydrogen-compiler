@@ -3,6 +3,8 @@ use thiserror::Error;
 
 #[derive(Debug, Clone)]
 pub enum Token {
+    Eq,
+    Let,
     Exit,
     Semi,
     ParenOpen,
@@ -16,6 +18,7 @@ impl TryFrom<char> for Token {
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         let token = match value {
+            '=' => Token::Eq,
             ';' => Token::Semi,
             '(' => Token::ParenOpen,
             ')' => Token::ParenClose,
@@ -30,6 +33,7 @@ impl FromStr for Token {
 
     fn from_str(word: &str) -> Result<Self, Self::Err> {
         let token = match word {
+            "let" => Token::Let,
             "exit" => Token::Exit,
             i64_literal if i64_literal.parse::<i64>().is_ok() => {
                 Token::I64Literal(i64_literal.parse().unwrap())
