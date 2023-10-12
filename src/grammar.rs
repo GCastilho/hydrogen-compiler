@@ -1,8 +1,13 @@
 use crate::{
-    parser::{AstParserError, TokenIterator, TreeParser},
+    parser::{AstParserError, StackVarIdxMap, TokenIterator, TreeParser},
     token::Token,
 };
-use std::iter::Peekable;
+use lazy_static::lazy_static;
+use std::{iter::Peekable, sync::Mutex};
+
+lazy_static! {
+    static ref IDENT_STACK_POS: Mutex<StackVarIdxMap> = Mutex::new(StackVarIdxMap::new());
+}
 
 #[derive(Debug)]
 pub enum Statement {
@@ -21,6 +26,9 @@ impl TreeParser for Statement {
                     Token::Ident(ident) => ident,
                     _ => return Err(AstParserError::ExpectedToken(Token::Ident("ident".into()))),
                 };
+                if IDENT_STACK_POS.lock().unwrap().contains_ident(&ident) {
+                    return Err(AstParserError::IdentifierAlreadyUsed(ident));
+                }
                 iter.expect_token(Token::Eq)?;
                 let expr = Expr::try_from_iter(iter)?;
                 Ok(Self::Let { ident, expr })
@@ -44,11 +52,12 @@ impl TreeParser for Statement {
         match self {
             Statement::Exit(expr) => {
                 let expr = expr.to_asm();
+                let pop = IDENT_STACK_POS.lock().unwrap().pop("rdi");
                 format!(
                     "\
                     {expr}\
                     \x20\x20mov rax, 60\n\
-                    \x20\x20pop rdi\n\
+                    \x20\x20{pop}\
                     \x20\x20syscall\n\
                     "
                 )
@@ -80,10 +89,11 @@ impl TreeParser for Expr {
     fn to_asm(&self) -> String {
         match self {
             Expr::I64(i64) => {
+                let push = IDENT_STACK_POS.lock().unwrap().push("rax");
                 format!(
                     "\
                     \x20\x20mov rax, {i64}\n\
-                    \x20\x20push rax\n\
+                    \x20\x20{push}\
                     "
                 )
             }

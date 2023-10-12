@@ -1,5 +1,5 @@
 use crate::{grammar::Statement, token::Token};
-use std::{iter::Peekable, mem};
+use std::{collections::HashMap, iter::Peekable, mem};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -12,6 +12,9 @@ pub enum AstParserError {
 
     #[error("Expected token {0:?}")]
     ExpectedToken(Token),
+
+    #[error("Identifier already used {0}")]
+    IdentifierAlreadyUsed(String),
 }
 
 #[derive(Debug)]
@@ -86,5 +89,46 @@ impl<I: Iterator<Item = Token>> Parser for I {
         Self: Iterator<Item = Token>,
     {
         Program::try_from_iter(self.peekable())
+    }
+}
+
+struct StackMetadata {
+    stack_location: usize,
+}
+
+pub struct StackVarIdxMap {
+    stack_size: usize,
+    ident_stack_pos: HashMap<String, StackMetadata>,
+}
+
+impl StackVarIdxMap {
+    pub fn new() -> Self {
+        Self {
+            stack_size: 0,
+            ident_stack_pos: HashMap::new(),
+        }
+    }
+
+    pub fn push(&mut self, reg: &str) -> String {
+        self.stack_size += 1;
+        format!("push {reg}\n")
+    }
+
+    pub fn pop(&mut self, reg: &str) -> String {
+        self.stack_size -= 1;
+        format!("pop {reg}\n")
+    }
+
+    pub fn contains_ident(&self, key: &str) -> bool {
+        self.ident_stack_pos.contains_key(key)
+    }
+
+    pub fn insert(&mut self, ident: &str) {
+        self.ident_stack_pos.insert(
+            ident.to_string(),
+            StackMetadata {
+                stack_location: self.stack_size,
+            },
+        );
     }
 }
