@@ -1,5 +1,5 @@
 use crate::{
-    parser::{AstParserError, StackVarIdxMap, TokenIterator, TreeParser},
+    parser::{AsmStream, AstParserError, StackVarIdxMap, TokenIterator, TreeParser},
     token::Token,
 };
 use lazy_static::lazy_static;
@@ -48,19 +48,13 @@ impl TreeParser for Statement {
         }
     }
 
-    fn to_asm(&self) -> String {
+    fn to_asm(&self, asm_stream: &mut AsmStream) {
         match self {
             Statement::Exit(expr) => {
-                let expr = expr.to_asm();
-                let pop = IDENT_STACK_POS.lock().unwrap().pop("rdi");
-                format!(
-                    "\
-                    {expr}\
-                    \x20\x20mov rax, 60\n\
-                    \x20\x20{pop}\
-                    \x20\x20syscall\n\
-                    "
-                )
+                expr.to_asm(asm_stream);
+                asm_stream.write_line("mov rax, 60");
+                IDENT_STACK_POS.lock().unwrap().pop(asm_stream, "rdi");
+                asm_stream.write_line("syscall");
             }
             Statement::Let { ident, expr } => todo!(),
         }
@@ -86,16 +80,11 @@ impl TreeParser for Expr {
         Ok(expr)
     }
 
-    fn to_asm(&self) -> String {
+    fn to_asm(&self, asm_stream: &mut AsmStream) {
         match self {
             Expr::I64(i64) => {
-                let push = IDENT_STACK_POS.lock().unwrap().push("rax");
-                format!(
-                    "\
-                    \x20\x20mov rax, {i64}\n\
-                    \x20\x20{push}\
-                    "
-                )
+                asm_stream.write_line_string(format!("mov rax, {i64}"));
+                IDENT_STACK_POS.lock().unwrap().push(asm_stream, "rax");
             }
             Expr::Ident(ident) => todo!(),
         }

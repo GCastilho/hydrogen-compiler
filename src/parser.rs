@@ -1,5 +1,5 @@
 use crate::{grammar::Statement, token::Token};
-use std::{collections::HashMap, iter::Peekable, mem};
+use std::{collections::HashMap, fs::File, io::Write, iter::Peekable, mem};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -31,9 +31,10 @@ impl Program {
         Ok(Self(statements))
     }
 
-    pub fn to_asm(&self) -> String {
-        let statements = self.0.iter().map(|s| s.to_asm()).collect::<String>();
-        format!("global _start\n\n_start:\n{statements}")
+    pub fn to_asm(&self, output: File) {
+        let mut asm_stream = AsmStream { output };
+        asm_stream.write_line("global _start\n\n_start:");
+        self.0.iter().for_each(|s| s.to_asm(&mut asm_stream));
     }
 }
 
@@ -42,7 +43,7 @@ pub trait TreeParser: Sized {
         iter: &mut Peekable<I>,
     ) -> Result<Self, AstParserError>;
 
-    fn to_asm(&self) -> String;
+    fn to_asm(&self, asm_stream: &mut AsmStream);
 }
 
 pub trait TokenIterator
@@ -92,6 +93,34 @@ impl<I: Iterator<Item = Token>> Parser for I {
     }
 }
 
+pub struct AsmStream {
+    output: File,
+}
+
+impl AsmStream {
+    fn write(&mut self, data: &[u8]) {
+        self.output.write_all(data).expect("write buf failed");
+    }
+
+    fn writeln(&mut self, data: &[u8]) {
+        self.write(data);
+        self.write("\n".as_bytes());
+    }
+
+    pub fn write_label(&mut self, label: &str) {
+        self.writeln(label.as_bytes());
+    }
+
+    pub fn write_line(&mut self, line: &str) {
+        self.write("  ".as_bytes());
+        self.writeln(line.as_bytes());
+    }
+
+    pub fn write_line_string(&mut self, line: String) {
+        self.write_line(&line)
+    }
+}
+
 struct StackMetadata {
     stack_location: usize,
 }
@@ -109,14 +138,14 @@ impl StackVarIdxMap {
         }
     }
 
-    pub fn push(&mut self, reg: &str) -> String {
+    pub fn push(&mut self, asm_stream: &mut AsmStream, reg: &str) {
         self.stack_size += 1;
-        format!("push {reg}\n")
+        asm_stream.write_line_string(format!("push {reg}"));
     }
 
-    pub fn pop(&mut self, reg: &str) -> String {
+    pub fn pop(&mut self, asm_stream: &mut AsmStream, reg: &str) {
         self.stack_size -= 1;
-        format!("pop {reg}\n")
+        asm_stream.write_line_string(format!("pop {reg}"));
     }
 
     pub fn contains_ident(&self, key: &str) -> bool {

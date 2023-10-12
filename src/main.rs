@@ -5,7 +5,7 @@ mod tokenization;
 
 use parser::*;
 use std::fs;
-use std::io::{BufReader, Write};
+use std::io::BufReader;
 use std::process::Command;
 use tokenization::Tokenizer;
 use utf8_chars::BufReadCharsExt;
@@ -25,8 +25,8 @@ fn main() {
         .expect("parse failed");
     println!("root: {:?}", root);
 
-    let mut output = fs::File::create(OUTPUT_FILE_PATH).unwrap();
-    output.write_all(root.to_asm().as_bytes()).unwrap();
+    let output = fs::File::create(OUTPUT_FILE_PATH).unwrap();
+    root.to_asm(output);
 
     let nasm = Command::new("nasm")
         .args(["-felf64", OUTPUT_FILE_PATH])
