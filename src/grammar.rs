@@ -3,10 +3,11 @@ use crate::{
     token::Token,
 };
 use lazy_static::lazy_static;
-use std::iter::Peekable;
+use std::{collections::HashSet, iter::Peekable, sync::Mutex};
 
 lazy_static! {
     static ref STACK_IDX_TRACKER: StackVarIdxMap = StackVarIdxMap::new();
+    static ref DECLARED_VARIABLES: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
 }
 
 #[derive(Debug)]
@@ -26,9 +27,10 @@ impl TreeParser for Statement {
                     Token::Ident(ident) => ident,
                     _ => return Err(AstParserError::ExpectedToken(Token::Ident("ident".into()))),
                 };
-                if STACK_IDX_TRACKER.contains_ident(&ident) {
+                if DECLARED_VARIABLES.lock().unwrap().contains(&ident) {
                     return Err(AstParserError::IdentifierAlreadyUsed(ident));
                 }
+                DECLARED_VARIABLES.lock().unwrap().insert(ident.clone());
                 iter.expect_token(Token::Eq)?;
                 let expr = Expr::try_from_iter(iter)?;
                 Ok(Self::Let { ident, expr })
@@ -53,10 +55,13 @@ impl TreeParser for Statement {
             Statement::Exit(expr) => {
                 expr.to_asm(asm_stream);
                 asm_stream.write_line("mov rax, 60");
-                STACK_IDX_TRACKER.pop(asm_stream, "rdi");
+                STACK_IDX_TRACKER.write_pop(asm_stream, "rdi");
                 asm_stream.write_line("syscall");
             }
-            Statement::Let { ident, expr } => todo!(),
+            Statement::Let { ident, expr } => {
+                STACK_IDX_TRACKER.insert_ident(ident);
+                expr.to_asm(asm_stream);
+            }
         }
     }
 }
@@ -74,7 +79,12 @@ impl TreeParser for Expr {
         let token = iter.next_token()?;
         let expr = match token {
             Token::I64Literal(i64) => Self::I64(i64),
-            Token::Ident(ident) => Self::Ident(ident),
+            Token::Ident(ident) => {
+                if !DECLARED_VARIABLES.lock().unwrap().contains(&ident) {
+                    return Err(AstParserError::IdentifierUndeclared(ident));
+                }
+                Self::Ident(ident)
+            }
             _ => return Err(AstParserError::UnexpectedToken(token)),
         };
         Ok(expr)
@@ -84,9 +94,12 @@ impl TreeParser for Expr {
         match self {
             Expr::I64(i64) => {
                 asm_stream.write_line_string(format!("mov rax, {i64}"));
-                STACK_IDX_TRACKER.push(asm_stream, "rax");
+                STACK_IDX_TRACKER.write_push(asm_stream, "rax");
             }
-            Expr::Ident(ident) => todo!(),
+            Expr::Ident(ident) => {
+                let stack_offset = STACK_IDX_TRACKER.get_stack_offeset(ident).unwrap();
+                STACK_IDX_TRACKER.write_push(asm_stream, &format!("QWORD [rsp + {stack_offset}]"));
+            }
         }
     }
 }

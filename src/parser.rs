@@ -15,6 +15,9 @@ pub enum AstParserError {
 
     #[error("Identifier already used {0}")]
     IdentifierAlreadyUsed(String),
+
+    #[error("Undeclared Identifier {0}")]
+    IdentifierUndeclared(String),
 }
 
 #[derive(Debug)]
@@ -107,9 +110,9 @@ impl AsmStream {
         self.write("\n".as_bytes());
     }
 
-    pub fn write_label(&mut self, label: &str) {
-        self.writeln(label.as_bytes());
-    }
+    // pub fn write_label(&mut self, label: &str) {
+    //     self.writeln(label.as_bytes());
+    // }
 
     pub fn write_line(&mut self, line: &str) {
         self.write("  ".as_bytes());
@@ -138,26 +141,30 @@ impl StackVarIdxMap {
         }
     }
 
-    pub fn push(&self, asm_stream: &mut AsmStream, reg: &str) {
+    pub fn write_push(&self, asm_stream: &mut AsmStream, reg: &str) {
         *self.stack_size.lock().unwrap() += 1;
         asm_stream.write_line_string(format!("push {reg}"));
     }
 
-    pub fn pop(&self, asm_stream: &mut AsmStream, reg: &str) {
+    pub fn write_pop(&self, asm_stream: &mut AsmStream, reg: &str) {
         *self.stack_size.lock().unwrap() -= 1;
         asm_stream.write_line_string(format!("pop {reg}"));
     }
 
-    pub fn contains_ident(&self, key: &str) -> bool {
-        self.ident_stack_pos.lock().unwrap().contains_key(key)
-    }
-
-    pub fn insert(&self, ident: &str) {
+    pub fn insert_ident(&self, ident: &str) {
         self.ident_stack_pos.lock().unwrap().insert(
             ident.to_string(),
             StackMetadata {
                 stack_location: *self.stack_size.lock().unwrap(),
             },
         );
+    }
+
+    pub fn get_stack_offeset(&self, ident: &str) -> Option<usize> {
+        self.ident_stack_pos
+            .lock()
+            .unwrap()
+            .get(ident)
+            .map(|v| ((*self.stack_size.lock().unwrap() - v.stack_location) - 1) * 8)
     }
 }
