@@ -3,10 +3,10 @@ use crate::{
     token::Token,
 };
 use lazy_static::lazy_static;
-use std::{iter::Peekable, sync::Mutex};
+use std::iter::Peekable;
 
 lazy_static! {
-    static ref IDENT_STACK_POS: Mutex<StackVarIdxMap> = Mutex::new(StackVarIdxMap::new());
+    static ref STACK_IDX_TRACKER: StackVarIdxMap = StackVarIdxMap::new();
 }
 
 #[derive(Debug)]
@@ -26,7 +26,7 @@ impl TreeParser for Statement {
                     Token::Ident(ident) => ident,
                     _ => return Err(AstParserError::ExpectedToken(Token::Ident("ident".into()))),
                 };
-                if IDENT_STACK_POS.lock().unwrap().contains_ident(&ident) {
+                if STACK_IDX_TRACKER.contains_ident(&ident) {
                     return Err(AstParserError::IdentifierAlreadyUsed(ident));
                 }
                 iter.expect_token(Token::Eq)?;
@@ -53,7 +53,7 @@ impl TreeParser for Statement {
             Statement::Exit(expr) => {
                 expr.to_asm(asm_stream);
                 asm_stream.write_line("mov rax, 60");
-                IDENT_STACK_POS.lock().unwrap().pop(asm_stream, "rdi");
+                STACK_IDX_TRACKER.pop(asm_stream, "rdi");
                 asm_stream.write_line("syscall");
             }
             Statement::Let { ident, expr } => todo!(),
@@ -84,7 +84,7 @@ impl TreeParser for Expr {
         match self {
             Expr::I64(i64) => {
                 asm_stream.write_line_string(format!("mov rax, {i64}"));
-                IDENT_STACK_POS.lock().unwrap().push(asm_stream, "rax");
+                STACK_IDX_TRACKER.push(asm_stream, "rax");
             }
             Expr::Ident(ident) => todo!(),
         }

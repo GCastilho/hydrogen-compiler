@@ -1,5 +1,5 @@
 use crate::{grammar::Statement, token::Token};
-use std::{collections::HashMap, fs::File, io::Write, iter::Peekable, mem};
+use std::{collections::HashMap, fs::File, io::Write, iter::Peekable, mem, sync::Mutex};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -126,37 +126,37 @@ struct StackMetadata {
 }
 
 pub struct StackVarIdxMap {
-    stack_size: usize,
-    ident_stack_pos: HashMap<String, StackMetadata>,
+    stack_size: Mutex<usize>,
+    ident_stack_pos: Mutex<HashMap<String, StackMetadata>>,
 }
 
 impl StackVarIdxMap {
     pub fn new() -> Self {
         Self {
-            stack_size: 0,
-            ident_stack_pos: HashMap::new(),
+            stack_size: Mutex::new(0),
+            ident_stack_pos: Mutex::new(HashMap::new()),
         }
     }
 
-    pub fn push(&mut self, asm_stream: &mut AsmStream, reg: &str) {
-        self.stack_size += 1;
+    pub fn push(&self, asm_stream: &mut AsmStream, reg: &str) {
+        *self.stack_size.lock().unwrap() += 1;
         asm_stream.write_line_string(format!("push {reg}"));
     }
 
-    pub fn pop(&mut self, asm_stream: &mut AsmStream, reg: &str) {
-        self.stack_size -= 1;
+    pub fn pop(&self, asm_stream: &mut AsmStream, reg: &str) {
+        *self.stack_size.lock().unwrap() -= 1;
         asm_stream.write_line_string(format!("pop {reg}"));
     }
 
     pub fn contains_ident(&self, key: &str) -> bool {
-        self.ident_stack_pos.contains_key(key)
+        self.ident_stack_pos.lock().unwrap().contains_key(key)
     }
 
-    pub fn insert(&mut self, ident: &str) {
-        self.ident_stack_pos.insert(
+    pub fn insert(&self, ident: &str) {
+        self.ident_stack_pos.lock().unwrap().insert(
             ident.to_string(),
             StackMetadata {
-                stack_location: self.stack_size,
+                stack_location: *self.stack_size.lock().unwrap(),
             },
         );
     }
